@@ -64,7 +64,7 @@ data:
             endpointUser: "s4admin"
             endpointPassword: "s4secret"
           s4_buckets:
-            {{ .Values.bootstrapBuckets | toYaml }}
+            {{ .Values.bootstrapBuckets }}
 ---
 apiVersion: v1
 kind: Secret
