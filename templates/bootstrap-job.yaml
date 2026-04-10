@@ -17,7 +17,7 @@ spec:
       containers:
         - name: ansible-runner
           image: quay.io/ansible/ansible-runner:latest
-          command: ["ansible-playbook", "playbook.yml"]
+          command: ["ansible-playbook", "/runner/project/playbook.yml"]
           env:
             - name: S4_ENDPOINT_ADDRESS
               value: "s4"
@@ -64,7 +64,7 @@ data:
             endpointUser: "s4admin"
             endpointPassword: "s4secret"
           s4_buckets:
-            {{ .Values.bootstrapBuckets }}
+            {{ .Values.bootstrapBuckets }} # FIXME this is coming through as [b1 b2 b3]
 ---
 apiVersion: v1
 kind: Secret
