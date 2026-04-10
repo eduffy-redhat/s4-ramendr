@@ -64,7 +64,9 @@ data:
             endpointUser: "s4admin"
             endpointPassword: "s4secret"
           s4_buckets:
-            {{ .Values.bootstrapBuckets }} # FIXME this is coming through as [b1 b2 b3]
+            {{- range .Values.bootstrapBuckets }}
+            - {{ . }}
+            {{- end }}
 ---
 apiVersion: v1
 kind: Secret
