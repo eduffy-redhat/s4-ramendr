@@ -58,11 +58,11 @@ data:
       roles:
         - role: s4
           s4_s4:
-            endpointAddress: "{{ lookup('env', 'S4_ENDPOINT_ADDRESS') }}"
-            endpointPort: "{{ lookup('env', 'S4_ENDPOINT_PORT') }}"
-            endpointProtocol: "{{ lookup('env', 'S4_ENDPOINT_PROTOCOL') }}"
-            endpointUser: "{{ lookup('env', 'S4_ENDPOINT_USER') }}"
-            endpointPassword: "{{ lookup('env', 'S4_ENDPOINT_PASSWORD') }}"
+            endpointAddress: "s4"
+            endpointPort: "7480"
+            endpointProtocol: "http"
+            endpointUser: "s4admin"
+            endpointPassword: "s4secret"
           s4_buckets:
             {{ .Values.bootstrapBuckets | toYaml }}
 ---
