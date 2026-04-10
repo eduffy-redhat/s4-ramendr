@@ -1,0 +1,14 @@
+# quay.io/hybridcloudpatterns/imperative-container:v1
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: s4-bucket-bootstrap-job
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 99
+  template:
+    spec:
