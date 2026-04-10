@@ -1,14 +1,76 @@
-# quay.io/hybridcloudpatterns/imperative-container:v1
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: s4-bucket-bootstrap-job
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"
+  name: s4-add-buckets
+  labels:
+    app: s4-add-buckets
 spec:
-  parallelism: 1
-  completions: 1
-  backoffLimit: 99
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
   template:
+    metadata:
+      labels:
+        app: s4-add-buckets
     spec:
+      restartPolicy: Never
+      containers:
+        - name: ansible-runner
+          image: quay.io/ansible/ansible-runner:latest
+          command: ["ansible-playbook", "playbook.yml"]
+          env:
+            - name: S4_ENDPOINT_ADDRESS
+              value: "s4"
+            - name: S4_ENDPOINT_PORT
+              value: "7480"
+            - name: S4_ENDPOINT_PROTOCOL
+              value: "http"
+            - name: S4_ENDPOINT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: s4-credentials
+                  key: username
+            - name: S4_ENDPOINT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: s4-credentials
+                  key: password
+          volumeMounts:
+            - name: playbook
+              mountPath: /runner/project
+      volumes:
+        - name: playbook
+          configMap:
+            name: s4-playbook
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s4-playbook
+data:
+  playbook.yml: |
+    ---
+    - name: Add Requisite Buckets to the S4 Server
+      become: false
+      connection: local
+      hosts: localhost
+      gather_facts: false
+      roles:
+        - role: s4
+          s4_s4:
+            endpointAddress: "{{ lookup('env', 'S4_ENDPOINT_ADDRESS') }}"
+            endpointPort: "{{ lookup('env', 'S4_ENDPOINT_PORT') }}"
+            endpointProtocol: "{{ lookup('env', 'S4_ENDPOINT_PROTOCOL') }}"
+            endpointUser: "{{ lookup('env', 'S4_ENDPOINT_USER') }}"
+            endpointPassword: "{{ lookup('env', 'S4_ENDPOINT_PASSWORD') }}"
+          s4_buckets:
+            {{ .Values.bootstrapBuckets | toYaml }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: s4-credentials
+type: Opaque
+stringData:
+  username: s4admin
+  password: s4secret
