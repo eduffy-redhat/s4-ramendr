@@ -38,10 +38,15 @@ spec:
           volumeMounts:
             - name: playbook
               mountPath: /runner/project
+            - name: requirements
+              mountPath: /runner/project
       volumes:
         - name: playbook
           configMap:
             name: s4-playbook
+        - name: requirements
+          configMap:
+            name: s4-requirements
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -67,6 +72,19 @@ data:
             {{- range .Values.bootstrapBuckets }}
             - {{ . }}
             {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: s4-requirements
+data:
+  requirements.yml: |
+    roles:
+      # Role from a private Git repository
+      - src: https://github.com/eduffy-redhat/s4-role.git
+        scm: git
+        version: main
+        name: s4
 ---
 apiVersion: v1
 kind: Secret
