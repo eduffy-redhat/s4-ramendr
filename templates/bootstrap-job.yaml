@@ -1,3 +1,16 @@
+{{- if gt (len .Values.bootstrapBuckets) 0 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-read-deployments
+subjects:
+  - kind: ServiceAccount
+    name: default
+roleRef:
+  kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
+  name: view
 ---
 apiVersion: batch/v1
 kind: Job
@@ -14,15 +27,35 @@ spec:
         app: s4-add-buckets
     spec:
       restartPolicy: Never
+      initContainers:
+        - name: install-roles
+          image: quay.io/validatedpatterns/utility-container
+          imagePullPolicy: IfNotPresent
+          command: ["ansible-galaxy", "install", "-vr", "/pattern-home/requirements.yml"]
+          volumeMounts:
+            - name: playbook
+              mountPath: /pattern-home
+            - name: dependencies
+              mountPath: /pattern-home/.ansible
+        ## Wait for at least one controller to be ready -- a controller must be running for satellite to register with
+        - name: wait-for-controller
+          image: bitnami/kubectl
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -exc
+            - |
+              kubectl wait --for=condition=Available deployment {{ include "s4.fullname" . }} --timeout=300s
       containers:
         - name: ansible-runner
-          image: quay.io/ansible/ansible-runner:latest
-          command: ["ansible-playbook", "/runner/project/playbook.yml"]
+          image: quay.io/validatedpatterns/utility-container
+          imagePullPolicy: IfNotPresent
+          command: ["ansible-playbook", "-vvv", "/pattern-home/playbook.yml"]
           env:
             - name: S4_ENDPOINT_ADDRESS
-              value: "s4"
+              value: "s4-s3.apps.eduffy-2026-04-08.fusionaccess.devcluster.openshift.com"
             - name: S4_ENDPOINT_PORT
-              value: "7480"
+              value: "80"
             - name: S4_ENDPOINT_PROTOCOL
               value: "http"
             - name: S4_ENDPOINT_USER
@@ -37,16 +70,15 @@ spec:
                   key: password
           volumeMounts:
             - name: playbook
-              mountPath: /runner/project
-            - name: requirements
-              mountPath: /runner/project
+              mountPath: /pattern-home
+            - name: dependencies
+              mountPath: /pattern-home/.ansible
       volumes:
         - name: playbook
           configMap:
             name: s4-playbook
-        - name: requirements
-          configMap:
-            name: s4-requirements
+        - name: dependencies
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -63,21 +95,15 @@ data:
       roles:
         - role: s4
           s4_s4:
-            endpointAddress: "s4"
-            endpointPort: "7480"
-            endpointProtocol: "http"
-            endpointUser: "s4admin"
-            endpointPassword: "s4secret"
+            endpointAddress: "{{ "{{" }} lookup('ansible.builtin.env', 'S4_ENDPOINT_ADDRESS') {{ "}}" }}"
+            endpointPort: "{{ "{{" }} lookup('ansible.builtin.env', 'S4_ENDPOINT_PORT') {{ "}}" }}"
+            endpointProtocol: "{{ "{{" }} lookup('ansible.builtin.env', 'S4_ENDPOINT_PROTOCOL') {{ "}}" }}"
+            endpointUser: "{{ "{{" }} lookup('ansible.builtin.env', 'S4_ENDPOINT_USER') {{ "}}" }}"
+            endpointPassword: "{{ "{{" }} lookup('ansible.builtin.env', 'S4_ENDPOINT_PASSWORD') {{ "}}" }}"
           s4_buckets:
             {{- range .Values.bootstrapBuckets }}
             - {{ . }}
             {{- end }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: s4-requirements
-data:
   requirements.yml: |
     roles:
       # Role from a private Git repository
@@ -85,6 +111,9 @@ data:
         scm: git
         version: main
         name: s4
+    collections:
+      # The standard collection for AWS resources
+      - name: amazon.aws
 ---
 apiVersion: v1
 kind: Secret
@@ -94,3 +123,4 @@ type: Opaque
 stringData:
   username: s4admin
   password: s4secret
+{{- end }}

@@ -5,8 +5,10 @@
 replicaCount: 1
 
 bootstrapBuckets:
-  - "s3://test123"
-  - "s3://test213"
+  - eduffy-1
+  - eduffy-2
+  - eduffy-3
+  - eduffy-4
 
 # Image configuration
 image:
