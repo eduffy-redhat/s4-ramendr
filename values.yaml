@@ -4,11 +4,8 @@
 # -- Number of replicas (only 1 supported due to SQLite backend)
 replicaCount: 1
 
-bootstrapBuckets:
-  - eduffy-1
-  - eduffy-2
-  - eduffy-3
-  - eduffy-4
+# -- Buckets that will be created during startup
+bootstrapBuckets: []
 
 # Image configuration
 image:
@@ -157,7 +154,7 @@ ingress:
     className: ''
     annotations: {}
     hosts:
-      - host: s4-s3.apps.eduffy-2026-04-08.fusionaccess.devcluster.openshift.com
+      - host: s4-s3
         paths:
           - path: /
             pathType: Prefix
